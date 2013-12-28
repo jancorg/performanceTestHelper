@@ -1,4 +1,5 @@
 performanceTestHelper
 =====================
 
-Performance measure helper &amp; MM example project
+Multimechanize python helper class. Supports concurrent pages load times. (for ajax calls)
+
