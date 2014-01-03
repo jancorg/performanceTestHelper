@@ -1,0 +1,18 @@
+location  /some/place/to/cache {
+                if ( $http_x_requested_with !~ XMLHttpRequest ) {
+                        set $json  nocache;
+                        }
+                proxy_cache_bypass      $json;
+                proxy_cache_methods POST;
+                proxy_cache_valid 200 301 302 304 5m;               
+                proxy_cache_key $request_uri$sessionid$is_args$args; # just an example
+                proxy_cache_use_stale updating error timeout invalid_header http_500 http_502 http_503 http_504;
+                add_header X-Cached $upstream_cache_status;
+
+                expires 5m;
+
+                log_format cache-5m-someplace '***$time_local '
+                    '$upstream_cache_status '
+                    'request_uri: $request_uri$is_args$args  ';
+                access_log /var/log/nginx/cache-5m-someplace.log cache-5m-someplace;
+          }
