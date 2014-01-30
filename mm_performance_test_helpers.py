@@ -12,7 +12,16 @@ class RequestThread(threading.Thread):
         self.performance_request = performance_request
 
     def run(self):
-        return self.performance_request.getTimeForRequest()
+        return self.performance_request.performRequest()
+
+    def withTime(f):
+        def new_f():
+            start_time = time.time()
+            f()
+            new_f.__name__ = f.__name__
+            new_f.latency = time.time() - start_time
+            return new_f.latency
+        return new_f
 
 class PerformanceRequest:
 	def __init__(self,site,user,passwd):
@@ -22,12 +31,10 @@ class PerformanceRequest:
 		self.site = site
 		self.latency = 0
 		self.browser = self.getBrowserInstance()
-		#self.url = urlparse("https://127.0.0.1/")
 		
 	def getBrowserInstance(self):
 		browser = mechanize.Browser(factory=mechanize.RobustFactory())
 		browser.set_handle_robots(False)
-		#browser.addheaders = [('User-agent', 'Mozilla/5.0 Compatible')]
 		browser.addheaders = [('User-agent', 'Load/Performance Tests')]
 		browser.set_handle_redirect(True)
 		browser.add_password(self.site, self.user, self.passwd)
@@ -36,41 +43,33 @@ class PerformanceRequest:
 	def turnBrowserInstanceLogable(self):
 		cookie_jar = cookielib.LWPCookieJar()
 		self.browser.set_cookiejar(cookie_jar)
-
-	def loginWithTime(self,user,password):
+		
+        @withTime
+	def login(self,user,password):
 		"""
-		This function is not generic, depends on the site, however this is made for testing same site instances.
                 TODO: put non generic code outside this block
 		"""
-		start_timer = time.time()
 		self.browser.select_form(nr=0)
 		self.browser["j_username"] = user
 		self.browser["j_password"] = password  
 		self.browser.submit()
-		return time.time() - start_timer
-
-	def logoutWithTime(self,url):
+		
+        @withTime
+	def logout(self,url):
 		self.request = url
-		return self.getTimeForRequest()
-
-	def getTimeForRequest(self):
-		start_timer = time.time()
+		
+        @withTime
+	def performRequest(self):
 		try:
 			resp = self.browser.open(self.request)
 			resp.read()
 		except urllib2.HTTPError as e:
-			print "-------------ERROR-----------------"
 			print str(e.code) + ": " + self.request
 
-		self.latency = time.time() - start_timer
-		#assert (resp.code == 200), 'Bad HTTP Response'
-		return self.latency
 
-	def getTimeForParallelRequests(self, requests_array):
-		#mainThread = threading.currentThread()
-		start_timer = time.time()
-	
-		for url in requests_array:
+        @withTime
+        def performParallelRequests(self, requests_array):
+                for url in requests_array:
 			threads = []
 			performance_request = PerformanceRequest(url,self.user,self.passwd)
 			t = RequestThread(performance_request)	
@@ -78,9 +77,5 @@ class PerformanceRequest:
 			threads.append(t)
 		for t in threads:
 			t.join()
-
-		self.latency = time.time() - start_timer
-		return self.latency
-
 
 
