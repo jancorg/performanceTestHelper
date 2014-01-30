@@ -14,15 +14,6 @@ class RequestThread(threading.Thread):
     def run(self):
         return self.performance_request.performRequest()
 
-    def withTime(f):
-        def new_f():
-            start_time = time.time()
-            f()
-            new_f.__name__ = f.__name__
-            new_f.latency = time.time() - start_time
-            return new_f.latency
-        return new_f
-
 class PerformanceRequest:
 	def __init__(self,site,user,passwd):
 		self.user = user
@@ -31,6 +22,15 @@ class PerformanceRequest:
 		self.site = site
 		self.latency = 0
 		self.browser = self.getBrowserInstance()
+		
+	def withTime(f):
+            def new_f():
+                start_time = time.time()
+                f()
+                new_f.__name__ = f.__name__
+                new_f.latency = time.time() - start_time
+                return new_f.latency
+            return new_f
 		
 	def getBrowserInstance(self):
 		browser = mechanize.Browser(factory=mechanize.RobustFactory())
