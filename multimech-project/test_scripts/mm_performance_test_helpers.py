@@ -14,6 +14,14 @@ class RequestThread(threading.Thread):
     def run(self):
         return self.performance_request.getTimeForRequest()
 
+    def withTime(f):
+        def new_f():
+            start_time = time.time()
+            f()
+            new_f.latency = time.time() - start_time
+            new_f.__name__ = f.__name__
+        return new_f
+
 class PerformanceRequest:
 	def __init__(self,site,user,passwd):
 		self.user = user
@@ -34,8 +42,9 @@ class PerformanceRequest:
 	def turnBrowserInstanceLogable(self):
 		cookie_jar = cookielib.LWPCookieJar()
 		self.browser.set_cookiejar(cookie_jar)
-
-	def loginWithTime(self,user,password):
+		
+        @withTime
+	def login(self,user,password):
 		"""
                 TODO: put non generic code outside this block
 		"""
@@ -44,26 +53,23 @@ class PerformanceRequest:
 		self.browser["j_username"] = user
 		self.browser["j_password"] = password  
 		self.browser.submit()
-		return time.time() - start_timer
-
-	def logoutWithTime(self,url):
+		
+        @withTime
+	def logout(self,url):
 		self.request = url
-		return self.getTimeForRequest()
-
+		
+        @withTime
 	def getTimeForRequest(self):
-		start_time = time.time()
 		try:
 			resp = self.browser.open(self.request)
 			resp.read()
 		except urllib2.HTTPError as e:
 			print str(e.code) + ": " + self.request
 
-		self.latency = time.time() - start_time
-		return self.latency
 
-        def performParallelRequests(self):
-        		
-		for url in requests_array:
+        @withTime
+        def performParallelRequests(self, requests_array):
+                for url in requests_array:
 			threads = []
 			performance_request = PerformanceRequest(url,self.user,self.passwd)
 			t = RequestThread(performance_request)	
@@ -71,12 +77,3 @@ class PerformanceRequest:
 			threads.append(t)
 		for t in threads:
 			t.join()
-
-	def getTimeForParallelRequests(self, requests_array):
-		#mainThread = threading.currentThread()
-		start_time = time.time()
-
-                performParallelRequests()
-
-		self.latency = time.time() - start_time
-		return self.latency
