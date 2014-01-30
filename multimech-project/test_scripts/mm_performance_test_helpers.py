@@ -12,14 +12,15 @@ class RequestThread(threading.Thread):
         self.performance_request = performance_request
 
     def run(self):
-        return self.performance_request.getTimeForRequest()
+        return self.performance_request.performRequest()
 
     def withTime(f):
         def new_f():
             start_time = time.time()
             f()
-            new_f.latency = time.time() - start_time
             new_f.__name__ = f.__name__
+            new_f.latency = time.time() - start_time
+            return new_f.latency
         return new_f
 
 class PerformanceRequest:
@@ -48,7 +49,6 @@ class PerformanceRequest:
 		"""
                 TODO: put non generic code outside this block
 		"""
-		start_timer = time.time()
 		self.browser.select_form(nr=0)
 		self.browser["j_username"] = user
 		self.browser["j_password"] = password  
@@ -59,7 +59,7 @@ class PerformanceRequest:
 		self.request = url
 		
         @withTime
-	def getTimeForRequest(self):
+	def performRequest(self):
 		try:
 			resp = self.browser.open(self.request)
 			resp.read()
