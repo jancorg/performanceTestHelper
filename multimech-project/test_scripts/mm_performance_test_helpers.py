@@ -12,16 +12,7 @@ class RequestThread(threading.Thread):
         self.performance_request = performance_request
 
     def run(self):
-        return self.performance_request.performRequest()
-
-    def withTime(f):
-        def new_f():
-            start_time = time.time()
-            f()
-            new_f.__name__ = f.__name__
-            new_f.latency = time.time() - start_time
-            return new_f.latency
-        return new_f
+        return self.performance_request.getTimeForRequest()
 
 class PerformanceRequest:
 	def __init__(self,site,user,passwd):
@@ -43,33 +34,35 @@ class PerformanceRequest:
 	def turnBrowserInstanceLogable(self):
 		cookie_jar = cookielib.LWPCookieJar()
 		self.browser.set_cookiejar(cookie_jar)
-		
-        @withTime
-	def login(self,user,password):
-		"""
-                TODO: put non generic code outside this block
-		"""
+
+	def loginWithTime(self,user,password):
+                #TODO: put non generic code outside this block
+		start_timer = time.time()
 		self.browser.select_form(nr=0)
 		self.browser["j_username"] = user
 		self.browser["j_password"] = password  
 		self.browser.submit()
-		
-        @withTime
-	def logout(self,url):
+		return time.time() - start_timer
+
+	def logoutWithTime(self,url):
 		self.request = url
-		
-        @withTime
-	def performRequest(self):
+		return self.getTimeForRequest()
+
+	def getTimeForRequest(self):
+		start_timer = time.time()
 		try:
 			resp = self.browser.open(self.request)
 			resp.read()
 		except urllib2.HTTPError as e:
 			print str(e.code) + ": " + self.request
 
+		self.latency = time.time() - start_timer
+		return self.latency
 
-        @withTime
-        def performParallelRequests(self, requests_array):
-                for url in requests_array:
+	def getTimeForParallelRequests(self, requests_array
+		start_timer = time.time()
+	
+		for url in requests_array:
 			threads = []
 			performance_request = PerformanceRequest(url,self.user,self.passwd)
 			t = RequestThread(performance_request)	
@@ -77,3 +70,8 @@ class PerformanceRequest:
 			threads.append(t)
 		for t in threads:
 			t.join()
+
+		self.latency = time.time() - start_timer
+		return self.latency
+
+
